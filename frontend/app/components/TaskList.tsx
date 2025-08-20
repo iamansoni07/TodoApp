@@ -1,159 +1,204 @@
 'use client';
-
 import { useState } from 'react';
-import { Task, TaskFilters } from '../utils/api';
+import { motion, AnimatePresence } from 'framer-motion';
 import TaskItem from './TaskItem';
+import LoadingSpinner from './LoadingSpinner';
+import { Task } from '../utils/api';
 
 interface TaskListProps {
   tasks: Task[];
-  onToggleStatus: (id: string, status: 'pending' | 'done') => void;
   onEdit: (task: Task) => void;
-  onDelete: (id: string) => void;
-  filters: TaskFilters;
-  onFiltersChange: (filters: TaskFilters) => void;
+  onDelete: (taskId: string) => void;
+  onToggleStatus: (taskId: string) => void;
+  isLoading?: boolean;
 }
 
-export default function TaskList({ 
-  tasks, 
-  onToggleStatus, 
-  onEdit, 
-  onDelete, 
-  filters, 
-  onFiltersChange 
-}: TaskListProps) {
-  const [showFilters, setShowFilters] = useState(false);
+export default function TaskList({ tasks, onEdit, onDelete, onToggleStatus, isLoading = false }: TaskListProps) {
+  const [filters, setFilters] = useState({
+    status: '',
+    sortBy: 'createdAt',
+    order: 'desc' as 'asc' | 'desc'
+  });
 
-  const handleFilterChange = (key: keyof TaskFilters, value: string) => {
-    onFiltersChange({
-      ...filters,
-      [key]: value || undefined
-    });
+  // Ensure tasks is an array and provide fallback
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
+  
+  // Ensure filters has proper fallback values
+  const safeFilters = filters || { status: '', sortBy: 'createdAt', order: 'desc' as 'asc' | 'desc' };
+
+  const handleFilterChange = (key: string, value: string) => {
+    setFilters(prev => ({
+      ...prev,
+      [key]: value
+    }));
+  };
+
+  const handleSortChange = (sortBy: string) => {
+    setFilters(prev => ({
+      ...prev,
+      sortBy,
+      order: prev.sortBy === sortBy && prev.order === 'desc' ? 'asc' : 'desc'
+    }));
   };
 
   const clearFilters = () => {
-    onFiltersChange({});
+    setFilters({
+      status: '',
+      sortBy: 'createdAt',
+      order: 'desc'
+    });
   };
 
-  const pendingCount = tasks.filter(task => task.status === 'pending').length;
-  const completedCount = tasks.filter(task => task.status === 'done').length;
+  // Filter tasks
+  let filteredTasks = [...safeTasks];
+  
+  if (safeFilters.status) {
+    filteredTasks = filteredTasks.filter(task => task.status === safeFilters.status);
+  }
+
+  // Sort tasks
+  filteredTasks.sort((a, b) => {
+    let aValue: any, bValue: any;
+    
+    switch (safeFilters.sortBy) {
+      case 'title':
+        aValue = a.title.toLowerCase();
+        bValue = b.title.toLowerCase();
+        break;
+      case 'status':
+        aValue = a.status;
+        bValue = b.status;
+        break;
+      case 'updatedAt':
+        aValue = new Date(a.updatedAt || a.createdAt);
+        bValue = new Date(b.updatedAt || b.createdAt);
+        break;
+      default: // createdAt
+        aValue = new Date(a.createdAt);
+        bValue = new Date(b.createdAt);
+    }
+
+    if (safeFilters.order === 'asc') {
+      return aValue > bValue ? 1 : -1;
+    } else {
+      return aValue < bValue ? 1 : -1;
+    }
+  });
+
+  const hasActiveFilters = safeFilters.status || safeFilters.sortBy !== 'createdAt' || safeFilters.order !== 'desc';
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <LoadingSpinner size="md" text="Loading tasks..." />
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
-      {/* Task Summary */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            Tasks ({tasks.length})
-          </h2>
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-          >
-            {showFilters ? 'Hide' : 'Show'} Filters
-          </button>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{pendingCount}</div>
-            <div className="text-blue-600 dark:text-blue-400">Pending</div>
-          </div>
-          <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-            <div className="text-2xl font-bold text-green-600 dark:text-green-400">{completedCount}</div>
-            <div className="text-green-600 dark:text-green-400">Completed</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters */}
-      {showFilters && (
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Filters & Sorting</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label htmlFor="status-filter" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Status
+    <div className="space-y-8">
+      {/* Filters and Sorting */}
+      <div className="bg-gray-50 dark:bg-gray-800/50 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+        <div className="flex flex-col sm:flex-row gap-6 items-start sm:items-center justify-between">
+          <div className="flex flex-wrap gap-4">
+            {/* Status Filter */}
+            <div className="flex items-center gap-2">
+              <label htmlFor="status-filter" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Status:
               </label>
               <select
                 id="status-filter"
-                value={filters.status || ''}
+                value={safeFilters.status}
                 onChange={(e) => handleFilterChange('status', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-400"
               >
-                <option value="">All Statuses</option>
+                <option value="">All Status</option>
                 <option value="pending">Pending</option>
                 <option value="done">Done</option>
               </select>
             </div>
-            
-            <div>
-              <label htmlFor="sort-by" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Sort By
+
+            {/* Sort By */}
+            <div className="flex items-center gap-2">
+              <label htmlFor="sort-by" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Sort by:
               </label>
               <select
                 id="sort-by"
-                value={filters.sortBy || 'createdAt'}
-                onChange={(e) => handleFilterChange('sortBy', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                value={safeFilters.sortBy}
+                onChange={(e) => handleSortChange(e.target.value)}
+                className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-400"
               >
-                <option value="createdAt">Creation Date</option>
+                <option value="createdAt">Created Date</option>
+                <option value="updatedAt">Updated Date</option>
                 <option value="title">Title</option>
-                <option value="description">Description</option>
                 <option value="status">Status</option>
               </select>
             </div>
-            
-            <div>
-              <label htmlFor="sort-order" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Sort Order
-              </label>
-              <select
-                id="sort-order"
-                value={filters.sortOrder || 'desc'}
-                onChange={(e) => handleFilterChange('sortOrder', e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-              >
-                <option value="desc">Descending</option>
-                <option value="asc">Ascending</option>
-              </select>
-            </div>
-          </div>
-          
-          <div className="mt-4">
+
+            {/* Sort Order */}
             <button
-              onClick={clearFilters}
-              className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors duration-200"
+              onClick={() => handleSortChange(safeFilters.sortBy)}
+              className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm hover:bg-gray-50 dark:hover:bg-gray-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-400 transition-colors"
+              aria-label={`Sort ${safeFilters.order === 'asc' ? 'descending' : 'ascending'}`}
             >
-              Clear Filters
+              {safeFilters.order === 'asc' ? '↑' : '↓'}
             </button>
+
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                className="px-4 py-2 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors"
+              >
+                Clear Filters
+              </button>
+            )}
+          </div>
+
+          <div className="text-sm text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-700 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600">
+            {filteredTasks.length} of {safeTasks.length} tasks
           </div>
         </div>
-      )}
+      </div>
 
       {/* Task List */}
-      {tasks.length === 0 ? (
-        <div className="text-center py-12">
-          <div className="text-gray-400 dark:text-gray-500 mb-4">
-            <svg className="mx-auto h-12 w-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      {filteredTasks.length === 0 ? (
+        <div className="text-center py-16 bg-gray-50 dark:bg-gray-800/50 rounded-xl border-2 border-dashed border-gray-300 dark:border-gray-600">
+          <div className="text-gray-400 dark:text-gray-500 mb-6">
+            <svg className="mx-auto h-16 w-16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No tasks found</h3>
-          <p className="text-gray-500 dark:text-gray-400">
-            {filters.status || filters.sortBy ? 'Try adjusting your filters or create a new task.' : 'Get started by creating your first task!'}
+          <h3 className="text-xl font-medium text-gray-900 dark:text-white mb-3">
+            {hasActiveFilters ? 'No tasks match your filters' : 'No tasks yet'}
+          </h3>
+          <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+            {hasActiveFilters 
+              ? 'Try adjusting your filters or create a new task to get started.'
+              : 'Create your first task to get started with task management.'
+            }
           </p>
         </div>
       ) : (
-        <div className="space-y-4">
-          {tasks.map((task) => (
-            <TaskItem
-              key={task._id}
-              task={task}
-              onToggleStatus={onToggleStatus}
-              onEdit={onEdit}
-              onDelete={onDelete}
-            />
-          ))}
+        <div className="space-y-6">
+          <AnimatePresence>
+            {filteredTasks.map((task) => (
+              <motion.div
+                key={task._id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.3 }}
+              >
+                <TaskItem
+                  task={task}
+                  onToggleStatus={(id) => onToggleStatus(id)}
+                  onEdit={onEdit}
+                  onDelete={onDelete}
+                />
+              </motion.div>
+            ))}
+          </AnimatePresence>
         </div>
       )}
     </div>

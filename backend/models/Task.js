@@ -20,6 +20,22 @@ const taskSchema = new mongoose.Schema({
     type: Date,
     default: Date.now,
   },
+  updatedAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
+// Update the updatedAt field before saving
+taskSchema.pre('save', function(next) {
+  this.updatedAt = new Date();
+  next();
+});
+
+// Update the updatedAt field before updating
+taskSchema.pre('findOneAndUpdate', function(next) {
+  this.set({ updatedAt: new Date() });
+  next();
 });
 
 const Task = mongoose.model('Task', taskSchema);

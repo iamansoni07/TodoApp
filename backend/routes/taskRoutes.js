@@ -1,107 +1,108 @@
 const express = require('express');
 const router = express.Router();
-const Task = require('../models/Task');
 
-// GET all tasks (Read) with filtering and sorting
-router.get('/', async (req, res) => {
-    try {
-        const { status, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
-        
-        // Build filter object
-        const filter = {};
-        if (status && ['pending', 'done'].includes(status)) {
-            filter.status = status;
-        }
-        
-        // Build sort object
-        const sort = {};
-        const validSortFields = ['title', 'description', 'status', 'createdAt'];
-        if (validSortFields.includes(sortBy)) {
-            sort[sortBy] = sortOrder === 'asc' ? 1 : -1;
-        } else {
-            sort.createdAt = -1; // Default sort by creation date descending
-        }
-        
-        const tasks = await Task.find(filter).sort(sort);
-        res.json(tasks);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
+// Import controllers and middleware
+const taskController = require('../controllers/taskController');
+const { validate, validateQuery, validateParams } = require('../middleware/validation');
+const { taskCreationLimit, apiLimit } = require('../middleware/security');
+const { createTaskSchema, updateTaskSchema, taskQuerySchema, taskIdSchema } = require('../validators/taskValidators');
 
-// POST a new task (Create)
-router.post('/', async (req, res) => {
-    try {
-        const { title, description, status } = req.body;
-        
-        // Input validation
-        if (!title || !title.trim()) {
-            return res.status(400).json({ message: 'Title is required' });
-        }
-        if (!description || !description.trim()) {
-            return res.status(400).json({ message: 'Description is required' });
-        }
-        if (status && !['pending', 'done'].includes(status)) {
-            return res.status(400).json({ message: 'Status must be either "pending" or "done"' });
-        }
-        
-        const task = new Task({
-            title: title.trim(),
-            description: description.trim(),
-            status: status || 'pending',
-        });
-        
-        const newTask = await task.save();
-        res.status(201).json(newTask);
-    } catch (err) {
-        res.status(400).json({ message: err.message });
-    }
-});
+/**
+ * @route   GET /api/tasks
+ * @desc    Get all tasks with filtering, sorting, and pagination
+ * @access  Public
+ */
+router.get('/', 
+  apiLimit,
+  validateQuery(taskQuerySchema),
+  taskController.getTasks
+);
 
-// PUT to update a task (Update)
-router.put('/:id', async (req, res) => {
-    try {
-        const { title, description, status } = req.body;
-        
-        // Input validation
-        if (title !== undefined && (!title || !title.trim())) {
-            return res.status(400).json({ message: 'Title cannot be empty' });
-        }
-        if (description !== undefined && (!description || !description.trim())) {
-            return res.status(400).json({ message: 'Description cannot be empty' });
-        }
-        if (status && !['pending', 'done'].includes(status)) {
-            return res.status(400).json({ message: 'Status must be either "pending" or "done"' });
-        }
-        
-        // Build update object with only provided fields
-        const updateData = {};
-        if (title !== undefined) updateData.title = title.trim();
-        if (description !== undefined) updateData.description = description.trim();
-        if (status !== undefined) updateData.status = status;
-        
-        const updatedTask = await Task.findByIdAndUpdate(
-            req.params.id, 
-            updateData, 
-            { new: true, runValidators: true }
-        );
-        
-        if (!updatedTask) return res.status(404).json({ message: 'Task not found' });
-        res.json(updatedTask);
-    } catch (err) {
-        res.status(400).json({ message: err.message });
-    }
-});
+/**
+ * @route   GET /api/tasks/stats
+ * @desc    Get task statistics
+ * @access  Public
+ */
+router.get('/stats',
+  apiLimit,
+  taskController.getTaskStats
+);
 
-// DELETE a task (Delete)
-router.delete('/:id', async (req, res) => {
-    try {
-        const deletedTask = await Task.findByIdAndDelete(req.params.id);
-        if (!deletedTask) return res.status(404).json({ message: 'Task not found' });
-        res.json({ message: 'Task deleted' });
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
+/**
+ * @route   GET /api/tasks/search
+ * @desc    Search tasks by text
+ * @access  Public
+ */
+router.get('/search',
+  apiLimit,
+  validateQuery(taskQuerySchema),
+  taskController.searchTasks
+);
+
+/**
+ * @route   GET /api/tasks/:id
+ * @desc    Get a single task by ID
+ * @access  Public
+ */
+router.get('/:id',
+  apiLimit,
+  validateParams(taskIdSchema),
+  taskController.getTaskById
+);
+
+/**
+ * @route   POST /api/tasks
+ * @desc    Create a new task
+ * @access  Public
+ */
+router.post('/',
+  taskCreationLimit,
+  validate(createTaskSchema),
+  taskController.createTask
+);
+
+/**
+ * @route   PUT /api/tasks/:id
+ * @desc    Update an existing task
+ * @access  Public
+ */
+router.put('/:id',
+  apiLimit,
+  validateParams(taskIdSchema),
+  validate(updateTaskSchema),
+  taskController.updateTask
+);
+
+/**
+ * @route   PATCH /api/tasks/:id/toggle
+ * @desc    Toggle task status
+ * @access  Public
+ */
+router.patch('/:id/toggle',
+  apiLimit,
+  validateParams(taskIdSchema),
+  taskController.toggleTaskStatus
+);
+
+/**
+ * @route   DELETE /api/tasks/:id
+ * @desc    Delete a task
+ * @access  Public
+ */
+router.delete('/:id',
+  apiLimit,
+  validateParams(taskIdSchema),
+  taskController.deleteTask
+);
+
+/**
+ * @route   POST /api/tasks/bulk
+ * @desc    Perform bulk operations on tasks
+ * @access  Public
+ */
+router.post('/bulk',
+  apiLimit,
+  taskController.bulkOperations
+);
 
 module.exports = router;

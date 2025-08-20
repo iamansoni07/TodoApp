@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:5000/api/tasks';
+// Make API URL configurable for different environments
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/tasks';
 
 export interface Task {
   _id: string;
@@ -8,6 +9,7 @@ export interface Task {
   description: string;
   status: 'pending' | 'done';
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface CreateTaskData {
@@ -24,7 +26,7 @@ export interface UpdateTaskData {
 
 export interface TaskFilters {
   status?: 'pending' | 'done';
-  sortBy?: 'title' | 'description' | 'status' | 'createdAt';
+  sortBy?: 'title' | 'description' | 'status' | 'createdAt' | 'updatedAt';
   sortOrder?: 'asc' | 'desc';
 }
 
@@ -47,9 +49,15 @@ const handleApiError = (error: any): never => {
 export const createTask = async (taskData: CreateTaskData): Promise<Task> => {
   try {
     const response = await axios.post(API_BASE_URL, taskData);
-    return response.data;
+    
+    // Handle backend response format: { success: boolean, data: Task }
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    } else {
+      throw new Error('Invalid response format from server');
+    }
   } catch (error) {
-    handleApiError(error);
+    throw handleApiError(error);
   }
 };
 
@@ -62,9 +70,15 @@ export const getTasks = async (filters?: TaskFilters): Promise<Task[]> => {
     if (filters?.sortOrder) params.append('sortOrder', filters.sortOrder);
     
     const response = await axios.get(`${API_BASE_URL}?${params.toString()}`);
-    return response.data;
+    
+    // Handle backend response format: { success: boolean, data: Task[] }
+    if (response.data.success && Array.isArray(response.data.data)) {
+      return response.data.data;
+    } else {
+      throw new Error('Invalid response format from server');
+    }
   } catch (error) {
-    handleApiError(error);
+    throw handleApiError(error);
   }
 };
 
@@ -72,9 +86,15 @@ export const getTasks = async (filters?: TaskFilters): Promise<Task[]> => {
 export const updateTask = async (id: string, taskData: UpdateTaskData): Promise<Task> => {
   try {
     const response = await axios.put(`${API_BASE_URL}/${id}`, taskData);
-    return response.data;
+    
+    // Handle backend response format: { success: boolean, data: Task }
+    if (response.data.success && response.data.data) {
+      return response.data.data;
+    } else {
+      throw new Error('Invalid response format from server');
+    }
   } catch (error) {
-    handleApiError(error);
+    throw handleApiError(error);
   }
 };
 
@@ -83,6 +103,6 @@ export const deleteTask = async (id: string): Promise<void> => {
   try {
     await axios.delete(`${API_BASE_URL}/${id}`);
   } catch (error) {
-    handleApiError(error);
+    throw handleApiError(error);
   }
 };
