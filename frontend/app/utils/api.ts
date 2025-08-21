@@ -1,37 +1,54 @@
 import axios from 'axios';
 
 // Make API URL configurable for different environments
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/tasks';
+const resolvedBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? (
+  process.env.NODE_ENV === 'development' ? 'http://localhost:5000/api/tasks' : ''
+);
+
+if (!resolvedBaseUrl) {
+  throw new Error('NEXT_PUBLIC_API_URL is not set in production.');
+}
+
+const API_BASE_URL = resolvedBaseUrl;
 
 export interface Task {
   _id: string;
   title: string;
   description: string;
-  status: 'pending' | 'done';
+  status: 'todo' | 'in-progress' | 'done';
   createdAt: string;
   updatedAt: string;
+  dueDate?: string | null;
 }
 
 export interface CreateTaskData {
   title: string;
   description: string;
-  status?: 'pending' | 'done';
+  status?: 'todo' | 'in-progress' | 'done';
+  dueDate?: string | null; // ISO string
 }
 
 export interface UpdateTaskData {
   title?: string;
   description?: string;
-  status?: 'pending' | 'done';
+  status?: 'todo' | 'in-progress' | 'done';
+  dueDate?: string | null; // ISO string
 }
 
 export interface TaskFilters {
-  status?: 'pending' | 'done';
-  sortBy?: 'title' | 'description' | 'status' | 'createdAt' | 'updatedAt';
+  status?: 'todo' | 'in-progress' | 'done';
+  sortBy?: 'title' | 'description' | 'status' | 'createdAt';
   sortOrder?: 'asc' | 'desc';
 }
 
 // Helper function to handle API errors
-const handleApiError = (error: any): never => {
+type AxiosLikeError = {
+  response?: { status: number; statusText: string; data?: { message?: string } };
+  request?: unknown;
+  message?: string;
+};
+
+const handleApiError = (error: AxiosLikeError): never => {
   if (error.response) {
     // Server responded with error status
     const message = error.response.data?.message || `HTTP ${error.response.status}: ${error.response.statusText}`;
@@ -57,7 +74,7 @@ export const createTask = async (taskData: CreateTaskData): Promise<Task> => {
       throw new Error('Invalid response format from server');
     }
   } catch (error) {
-    throw handleApiError(error);
+    throw handleApiError(error as AxiosLikeError);
   }
 };
 
@@ -78,7 +95,7 @@ export const getTasks = async (filters?: TaskFilters): Promise<Task[]> => {
       throw new Error('Invalid response format from server');
     }
   } catch (error) {
-    throw handleApiError(error);
+    throw handleApiError(error as AxiosLikeError);
   }
 };
 
@@ -94,7 +111,7 @@ export const updateTask = async (id: string, taskData: UpdateTaskData): Promise<
       throw new Error('Invalid response format from server');
     }
   } catch (error) {
-    throw handleApiError(error);
+    throw handleApiError(error as AxiosLikeError);
   }
 };
 
@@ -103,6 +120,6 @@ export const deleteTask = async (id: string): Promise<void> => {
   try {
     await axios.delete(`${API_BASE_URL}/${id}`);
   } catch (error) {
-    throw handleApiError(error);
+    throw handleApiError(error as AxiosLikeError);
   }
 };

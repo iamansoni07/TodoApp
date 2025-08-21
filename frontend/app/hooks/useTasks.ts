@@ -1,13 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { 
-  getTasks, 
-  createTask, 
-  updateTask, 
-  deleteTask, 
-  Task, 
-  CreateTaskData, 
-  UpdateTaskData, 
-  TaskFilters 
+import {
+  getTasks,
+  createTask,
+  updateTask,
+  deleteTask,
+  Task,
+  CreateTaskData,
+  UpdateTaskData,
+  TaskFilters,
 } from '../utils/api';
 
 // Query keys for consistent caching
@@ -32,18 +32,6 @@ export function useTasks(filters: TaskFilters = {}) {
     },
     staleTime: 1000 * 60 * 2, // 2 minutes
     gcTime: 1000 * 60 * 10, // 10 minutes
-  });
-}
-
-/**
- * Hook for fetching a single task by ID
- */
-export function useTask(id: string) {
-  return useQuery({
-    queryKey: taskKeys.detail(id),
-    queryFn: () => getTasks({ id }),
-    enabled: !!id,
-    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }
 
@@ -143,7 +131,12 @@ export function useToggleTaskStatus() {
         throw new Error('Task not found');
       }
       
-      const newStatus = currentTask.status === 'pending' ? 'done' : 'pending';
+      const nextStatusMap: Record<'todo' | 'in-progress' | 'done', 'todo' | 'in-progress' | 'done'> = {
+        'todo': 'in-progress',
+        'in-progress': 'done',
+        'done': 'todo',
+      };
+      const newStatus = nextStatusMap[currentTask.status as 'todo' | 'in-progress' | 'done'] || 'todo';
       return updateTask(taskId, { status: newStatus });
     },
     onSuccess: (updatedTask, taskId) => {
@@ -162,108 +155,3 @@ export function useToggleTaskStatus() {
   });
 }
 
-/**
- * Hook for bulk operations on tasks
- */
-export function useBulkTaskOperations() {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: async ({ operation, taskIds, data }: {
-      operation: 'delete' | 'update' | 'toggle';
-      taskIds: string[];
-      data?: any;
-    }) => {
-      const results = [];
-      const errors = [];
-
-      for (const taskId of taskIds) {
-        try {
-          let result;
-          
-          switch (operation) {
-            case 'delete':
-              result = await deleteTask(taskId);
-              break;
-            case 'update':
-              result = await updateTask(taskId, data);
-              break;
-            case 'toggle':
-              result = await updateTask(taskId, { 
-                status: data?.status || 'done' 
-              });
-              break;
-            default:
-              throw new Error(`Unknown operation: ${operation}`);
-          }
-          
-          results.push({ taskId, success: true, data: result });
-        } catch (error: any) {
-          errors.push({ 
-            taskId, 
-            success: false, 
-            error: error.message 
-          });
-        }
-      }
-
-      return { results, errors, summary: {
-        total: taskIds.length,
-        successful: results.length,
-        failed: errors.length
-      }};
-    },
-    onSuccess: (result) => {
-      // Invalidate and refetch tasks list
-      queryClient.invalidateQueries({ queryKey: taskKeys.lists() });
-      
-      // Remove deleted tasks from cache
-      if (result.summary.successful > 0) {
-        result.results.forEach(({ taskId }) => {
-          queryClient.removeQueries({ queryKey: taskKeys.detail(taskId) });
-        });
-      }
-    },
-    onError: (error) => {
-      // Error handling is done in the component
-    },
-  });
-}
-
-/**
- * Hook for optimistic updates
- */
-export function useOptimisticTaskUpdate() {
-  const queryClient = useQueryClient();
-
-  const updateTaskOptimistically = (
-    taskId: string, 
-    updates: Partial<Task>
-  ) => {
-    // Update the task in cache immediately
-    queryClient.setQueryData(
-      taskKeys.detail(taskId),
-      (old: any) => ({
-        ...old,
-        data: { ...old?.data, ...updates }
-      })
-    );
-
-    // Update the task in lists cache
-    queryClient.setQueriesData(
-      { queryKey: taskKeys.lists() },
-      (old: any) => {
-        if (!old?.data) return old;
-        
-        return {
-          ...old,
-          data: old.data.map((task: Task) =>
-            task._id === taskId ? { ...task, ...updates } : task
-          )
-        };
-      }
-    );
-  };
-
-  return { updateTaskOptimistically };
-}

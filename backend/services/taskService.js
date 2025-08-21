@@ -27,7 +27,7 @@ class TaskService {
 
     // Build filter object
     const filter = {};
-    if (status && ['pending', 'done'].includes(status)) {
+    if (status && ['todo', 'in-progress', 'done'].includes(status)) {
       filter.status = status;
     }
 
@@ -114,7 +114,7 @@ class TaskService {
    */
   async createTask(taskData) {
     try {
-      const { title, description, status = 'pending' } = taskData;
+      const { title, description, status = 'todo', dueDate } = taskData;
 
       // Check if task with same title already exists (case-insensitive)
       const existingTask = await Task.findOne({
@@ -128,7 +128,8 @@ class TaskService {
       const task = new Task({
         title: title.trim(),
         description: description.trim(),
-        status
+        status,
+        dueDate: dueDate ? new Date(dueDate) : null
       });
 
       const savedTask = await task.save();
@@ -152,7 +153,7 @@ class TaskService {
    */
   async updateTask(taskId, updateData) {
     try {
-      const { title, description, status } = updateData;
+      const { title, description, status, dueDate } = updateData;
 
       // Check if task exists
       const existingTask = await Task.findById(taskId);
@@ -177,6 +178,7 @@ class TaskService {
       if (title !== undefined) updateObject.title = title.trim();
       if (description !== undefined) updateObject.description = description.trim();
       if (status !== undefined) updateObject.status = status;
+      if (dueDate !== undefined) updateObject.dueDate = dueDate ? new Date(dueDate) : null;
 
       const updatedTask = await Task.findByIdAndUpdate(
         taskId,
@@ -236,7 +238,9 @@ class TaskService {
         throw new AppError('Task not found', 404);
       }
 
-      const newStatus = task.status === 'pending' ? 'done' : 'pending';
+      // toggle through three states: todo -> in-progress -> done -> todo
+      const nextStatusMap = { 'todo': 'in-progress', 'in-progress': 'done', 'done': 'todo' };
+      const newStatus = nextStatusMap[task.status] || 'todo';
       const updatedTask = await Task.findByIdAndUpdate(
         taskId,
         { status: newStatus },
@@ -260,9 +264,10 @@ class TaskService {
    */
   async getTaskStats() {
     try {
-      const [totalTasks, pendingTasks, completedTasks] = await Promise.all([
+      const [totalTasks, todoTasks, inProgressTasks, completedTasks] = await Promise.all([
         Task.countDocuments(),
-        Task.countDocuments({ status: 'pending' }),
+        Task.countDocuments({ status: 'todo' }),
+        Task.countDocuments({ status: 'in-progress' }),
         Task.countDocuments({ status: 'done' })
       ]);
 
@@ -272,7 +277,8 @@ class TaskService {
         success: true,
         data: {
           total: totalTasks,
-          pending: pendingTasks,
+          todo: todoTasks,
+          inProgress: inProgressTasks,
           completed: completedTasks,
           completionRate
         }

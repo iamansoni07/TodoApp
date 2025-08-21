@@ -8,8 +8,84 @@ export default function Navigation() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
+  const scrollToDashboardStats = () => {
+    // Add a small delay to ensure DOM is ready
+    setTimeout(() => {
+      // Target the hero section instead of dashboard stats
+      const heroSection = document.querySelector('[data-section="hero-section"]') as HTMLElement | null;
+      const nav = document.querySelector('nav') as HTMLElement | null;
+      const navHeight = nav?.offsetHeight ?? 64; // default ~h-16
+      const extraMargin = 16; // small margin below navbar
+      const offset = navHeight + extraMargin;
+
+      if (heroSection) {
+        const y = heroSection.getBoundingClientRect().top + window.pageYOffset - offset;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+      } else {
+        // Fallback: scroll to the top of the main content
+        const mainContent = document.querySelector('.space-y-12');
+        if (mainContent) {
+          const y = (mainContent as HTMLElement).getBoundingClientRect().top + window.pageYOffset - offset;
+          window.scrollTo({ top: y, behavior: 'smooth' });
+        }
+      }
+    }, 50);
+  };
+
+  const scrollToAllTasks = () => {
+    setTimeout(() => {
+      const tasksSection = document.querySelector('[data-section="tasks-section"]') as HTMLElement | null;
+      const nav = document.querySelector('nav') as HTMLElement | null;
+      const navHeight = nav?.offsetHeight ?? 64;
+      const extraMargin = 16;
+      const offset = navHeight + extraMargin;
+
+      if (tasksSection) {
+        const y = tasksSection.getBoundingClientRect().top + window.pageYOffset - offset;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+      }
+    }, 50);
+  };
+
+  const scrollToCreateTask = () => {
+    setTimeout(() => {
+      // First, trigger the form to show
+      const showFormEvent = new CustomEvent('showCreateTaskForm');
+      window.dispatchEvent(showFormEvent);
+      
+      // Then scroll to the form section
+      const createTaskSection = document.querySelector('[data-section="task-form-section"]') as HTMLElement | null;
+      const nav = document.querySelector('nav') as HTMLElement | null;
+      const navHeight = nav?.offsetHeight ?? 64;
+      const extraMargin = 16;
+      const offset = navHeight + extraMargin;
+
+      if (createTaskSection) {
+        const y = createTaskSection.getBoundingClientRect().top + window.pageYOffset - offset;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+      }
+    }, 100); // Increased delay to allow form to show first
+  };
+
   const navigationItems = [
-    { name: 'Dashboard', href: '/', icon: '📊' }
+    { 
+      name: 'Dashboard', 
+      href: '/', 
+      icon: '📊',
+      onClick: scrollToDashboardStats
+    },
+    { 
+      name: 'All Tasks', 
+      href: '/', 
+      icon: '📋',
+      onClick: scrollToAllTasks
+    },
+    { 
+      name: 'Create Task', 
+      href: '/', 
+      icon: '➕',
+      onClick: scrollToCreateTask
+    }
   ];
 
   const isActive = (href: string) => {
@@ -45,14 +121,16 @@ export default function Navigation() {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-1">
             {navigationItems.map((item) => (
-              <Link
+              <motion.button
                 key={item.name}
-                href={item.href}
+                onClick={item.onClick}
                 className={`relative px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 group ${
                   isActive(item.href)
                     ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20'
                     : 'text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
                 }`}
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
               >
                 <div className="flex items-center gap-2">
                   <span className="text-lg">{item.icon}</span>
@@ -65,7 +143,7 @@ export default function Navigation() {
                     transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
                   />
                 )}
-              </Link>
+              </motion.button>
             ))}
           </div>
 
@@ -130,19 +208,22 @@ export default function Navigation() {
           >
             <div className="px-4 py-3 space-y-1">
               {navigationItems.map((item) => (
-                <Link
+                <motion.button
                   key={item.name}
-                  href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-base font-medium transition-all duration-200 ${
+                  onClick={() => {
+                    item.onClick?.();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className={`w-full text-left flex items-center gap-3 px-3 py-2 rounded-lg text-base font-medium transition-all duration-200 ${
                     isActive(item.href)
                       ? 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20'
                       : 'text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`}
-                  onClick={() => setIsMobileMenuOpen(false)}
+                  whileTap={{ scale: 0.98 }}
                 >
                   <span className="text-xl">{item.icon}</span>
                   <span>{item.name}</span>
-                </Link>
+                </motion.button>
               ))}
             </div>
           </motion.div>

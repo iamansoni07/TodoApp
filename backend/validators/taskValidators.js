@@ -29,11 +29,20 @@ const createTaskSchema = Joi.object({
       'any.required': 'Description is required'
     }),
   
-  status: Joi.string()
-    .valid('pending', 'done')
-    .default('pending')
+  dueDate: Joi.date()
+    .iso()
+    .allow(null)
+    .optional()
     .messages({
-      'any.only': 'Status must be either "pending" or "done"'
+      'date.base': 'Due date must be a valid date',
+      'date.format': 'Due date must be in ISO format'
+    }),
+  
+  status: Joi.string()
+    .valid('todo', 'in-progress', 'done')
+    .default('todo')
+    .messages({
+      'any.only': 'Status must be one of: "To-Do", "In Progress", or "Done"'
     })
 });
 
@@ -64,11 +73,20 @@ const updateTaskSchema = Joi.object({
       'string.max': 'Description cannot exceed 500 characters'
     }),
   
-  status: Joi.string()
-    .valid('pending', 'done')
+  dueDate: Joi.date()
+    .iso()
+    .allow(null)
     .optional()
     .messages({
-      'any.only': 'Status must be either "pending" or "done"'
+      'date.base': 'Due date must be a valid date',
+      'date.format': 'Due date must be in ISO format'
+    }),
+  
+  status: Joi.string()
+    .valid('todo', 'in-progress', 'done')
+    .optional()
+    .messages({
+      'any.only': 'Status must be one of: "To-Do", "In Progress", or "Done"'
     })
 });
 
@@ -77,11 +95,17 @@ const updateTaskSchema = Joi.object({
  * @type {Joi.ObjectSchema}
  */
 const taskQuerySchema = Joi.object({
-  status: Joi.string()
-    .valid('pending', 'done')
+  q: Joi.string()
+    .min(2)
     .optional()
     .messages({
-      'any.only': 'Status must be either "pending" or "done"'
+      'string.min': 'Search query must be at least 2 characters long'
+    }),
+  status: Joi.string()
+    .valid('todo', 'in-progress', 'done')
+    .optional()
+    .messages({
+      'any.only': 'Status must be one of: "To-Do", "In Progress", or "Done"'
     }),
   
   sortBy: Joi.string()

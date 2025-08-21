@@ -17,6 +17,9 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
+// Trust proxy for Render/behind-proxy deployments so IPs and secure cookies work properly
+app.set('trust proxy', 1);
+
 // Security middleware
 app.use(helmetConfig);
 

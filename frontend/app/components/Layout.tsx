@@ -1,4 +1,4 @@
-'use client';
+  'use client';
 
 import { ReactNode } from 'react';
 import { motion } from 'framer-motion';
@@ -10,8 +10,7 @@ interface LayoutProps {
 }
 
 export default function Layout({ children }: LayoutProps) {
-  // SVG pattern for background
-  const backgroundPattern = `data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E`;
+  // Background pattern now provided via CSS class in globals.css
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
@@ -28,13 +27,10 @@ export default function Layout({ children }: LayoutProps) {
         >
           {/* Background Pattern */}
           <div className="absolute inset-0 bg-black/10">
-            <div 
-              className="absolute inset-0 opacity-20"
-              style={{ backgroundImage: `url('${backgroundPattern}')` }}
-            ></div>
+            <div className="absolute inset-0 opacity-20 bg-hero-pattern"></div>
           </div>
 
-          <div className="relative z-10 container mx-auto px-4 py-16 sm:py-24">
+          <div className="relative z-10 container mx-auto px-4 py-24 sm:py-40">
             <motion.div
               className="text-center max-w-4xl mx-auto"
               initial={{ opacity: 0, y: 20 }}

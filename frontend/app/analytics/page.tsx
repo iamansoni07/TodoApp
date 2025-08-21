@@ -42,7 +42,7 @@ export default function AnalyticsPage() {
   // Calculate analytics
   const totalTasks = safeTasks.length;
   const completedTasks = safeTasks.filter(task => task.status === 'done').length;
-  const pendingTasks = safeTasks.filter(task => task.status === 'pending').length;
+  const todoTasks = safeTasks.filter(task => task.status === 'todo').length;
   const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
   // Task creation trends (last 7 days)
@@ -126,8 +126,8 @@ export default function AnalyticsPage() {
           <div className="bg-gradient-to-br from-yellow-500 to-yellow-600 text-white p-6 rounded-2xl shadow-lg">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-yellow-100 text-sm font-medium">Pending</p>
-                <p className="text-3xl font-bold">{pendingTasks}</p>
+                <p className="text-yellow-100 text-sm font-medium">To-Do</p>
+                <p className="text-3xl font-bold">{todoTasks}</p>
               </div>
               <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
                 <span className="text-2xl">⏳</span>
@@ -279,7 +279,7 @@ export default function AnalyticsPage() {
                     Efficiency Tips
                   </h4>
                   <p className="text-indigo-800 dark:text-indigo-200 text-sm">
-                    {pendingTasks > completedTasks ? 'Try breaking down larger tasks into smaller, manageable pieces.' : 'Great job maintaining momentum!'}
+                    {todoTasks > completedTasks ? 'Try breaking down larger tasks into smaller, manageable pieces.' : 'Great job maintaining momentum!'}
                   </p>
                 </div>
               </div>

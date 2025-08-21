@@ -45,7 +45,7 @@ GET /api/tasks
 ```
 
 **Query Parameters:**
-- `status` (optional): Filter by status (`pending` or `done`)
+- `status` (optional): Filter by status (`todo`, `in-progress`, or `done`)
 - `sortBy` (optional): Sort field (`title`, `description`, `status`, `createdAt`)
 - `sortOrder` (optional): Sort direction (`asc` or `desc`)
 - `page` (optional): Page number (default: 1)
@@ -88,9 +88,10 @@ GET /api/tasks/stats
   "success": true,
   "data": {
     "total": 50,
-    "pending": 30,
-    "completed": 20,
-    "completionRate": 40
+    "todo": 30,
+    "inProgress": 10,
+    "completed": 10,
+    "completionRate": 20
   }
 }
 ```
@@ -131,7 +132,7 @@ GET /api/tasks/:id
     "_id": "60d21b4667d0d8992e610c85",
     "title": "Task Title",
     "description": "Task Description",
-    "status": "pending",
+    "status": "todo",
     "createdAt": "2023-12-20T10:30:00.000Z"
   }
 }
@@ -147,14 +148,14 @@ POST /api/tasks
 {
   "title": "Task Title",
   "description": "Task Description",
-  "status": "pending" // optional, defaults to "pending"
+  "status": "todo" // optional, defaults to "todo"
 }
 ```
 
 **Validation Rules:**
 - `title`: Required, 1-100 characters
 - `description`: Required, 1-500 characters
-- `status`: Optional, must be "pending" or "done"
+- `status`: Optional, must be "todo", "in-progress" or "done"
 
 **Response:**
 ```json

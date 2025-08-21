@@ -113,7 +113,8 @@ export default function TaskList({ tasks, onEdit, onDelete, onToggleStatus, isLo
                 className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:focus:ring-blue-400"
               >
                 <option value="">All Status</option>
-                <option value="pending">Pending</option>
+                <option value="todo">To-Do</option>
+                <option value="in-progress">In Progress</option>
                 <option value="done">Done</option>
               </select>
             </div>

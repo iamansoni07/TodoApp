@@ -30,6 +30,7 @@ export default function DashboardStats({ tasks, isLoading = false }: DashboardSt
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6, delay: 0.1 }}
+        data-section="dashboard-stats"
       >
         <div className="text-center mb-8">
           <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">
@@ -40,7 +41,7 @@ export default function DashboardStats({ tasks, isLoading = false }: DashboardSt
           </p>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
           <StatsContent tasks={safeTasks} />
         </div>
       </motion.div>
@@ -54,7 +55,8 @@ function StatsContent({ tasks }: { tasks: Task[] }) {
   
   const totalTasks = safeTasks.length;
   const completedTasks = safeTasks.filter(task => task.status === 'done').length;
-  const pendingTasks = safeTasks.filter(task => task.status === 'pending').length;
+  const todoTasks = safeTasks.filter(task => task.status === 'todo').length;
+  const inProgressTasks = safeTasks.filter(task => task.status === 'in-progress').length;
   
   // Ensure completion rate is always a valid number
   let completionRate = 0;
@@ -75,22 +77,31 @@ function StatsContent({ tasks }: { tasks: Task[] }) {
       darkBgColor: 'dark:bg-blue-900/20'
     },
     {
-      label: 'Completed',
+      label: 'To-Do',
+      value: todoTasks,
+      icon: '📝',
+      color: 'bg-blue-500',
+      textColor: 'text-blue-600',
+      bgColor: 'bg-blue-50',
+      darkBgColor: 'dark:bg-blue-900/20'
+    },
+    {
+      label: 'In Progress',
+      value: inProgressTasks,
+      icon: '⏳',
+      color: 'bg-yellow-500',
+      textColor: 'text-yellow-600',
+      bgColor: 'bg-yellow-50',
+      darkBgColor: 'dark:bg-yellow-900/20'
+    },
+    {
+      label: 'Done',
       value: completedTasks,
       icon: '✅',
       color: 'bg-green-500',
       textColor: 'text-green-600',
       bgColor: 'bg-green-50',
       darkBgColor: 'dark:bg-green-900/20'
-    },
-    {
-      label: 'Pending',
-      value: pendingTasks,
-      icon: '⏳',
-      color: 'bg-yellow-500',
-      textColor: 'text-yellow-600',
-      bgColor: 'bg-yellow-50',
-      darkBgColor: 'dark:bg-yellow-900/20'
     },
     {
       label: 'Completion Rate',
@@ -141,14 +152,9 @@ function StatsContent({ tasks }: { tasks: Task[] }) {
                 {totalTasks > 0 ? 'Active project' : 'No tasks yet'}
               </span>
             )}
-            {stat.label === 'Completed' && (
+            {stat.label === 'Done' && (
               <span className="text-sm text-gray-600 dark:text-gray-400">
                 {completedTasks > 0 ? 'Great progress!' : 'Start completing tasks'}
-              </span>
-            )}
-            {stat.label === 'Pending' && (
-              <span className="text-sm text-gray-600 dark:text-gray-400">
-                {pendingTasks > 0 ? 'Needs attention' : 'All caught up!'}
               </span>
             )}
           </div>

@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Layout from './components/Layout';
 import TaskForm from './components/TaskForm';
@@ -8,8 +8,10 @@ import DashboardStats from './components/DashboardStats';
 import QuickActions from './components/QuickActions';
 import ClientOnly from './components/ClientOnly';
 import { useTasks, useCreateTask, useUpdateTask, useDeleteTask, useToggleTaskStatus } from './hooks/useTasks';
-import { Task } from './utils/api';
+import { Task, CreateTaskData, UpdateTaskData } from './utils/api';
 import LoadingSpinner from './components/LoadingSpinner';
+
+type TaskSubmitData = CreateTaskData | UpdateTaskData;
 
 export default function HomePage() {
   const [isEditing, setIsEditing] = useState(false);
@@ -34,8 +36,8 @@ export default function HomePage() {
     setTimeout(() => setShowError(false), 5000);
   };
 
-  const handleCreateTask = (data: any) => {
-    createTaskMutation.mutate(data, {
+  const handleCreateTask = (data: TaskSubmitData) => {
+    createTaskMutation.mutate(data as CreateTaskData, {
       onSuccess: () => {
         // Reset all form state
         setShowForm(false);
@@ -48,9 +50,9 @@ export default function HomePage() {
     });
   };
 
-  const handleUpdateTask = (data: any) => {
+  const handleUpdateTask = (data: TaskSubmitData) => {
     if (editingTask) {
-      updateTaskMutation.mutate({ id: editingTask._id, data }, {
+      updateTaskMutation.mutate({ id: editingTask._id, data: data as UpdateTaskData }, {
         onSuccess: () => {
           // Reset all form state
           setIsEditing(false);
@@ -64,10 +66,38 @@ export default function HomePage() {
     }
   };
 
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditingTask(null);
+    setShowForm(false);
+  };
+
+  // Smoothly scroll to the task form section, accounting for sticky navbar height
+  const scrollToTaskForm = () => {
+    const attemptScroll = (attempt: number = 0) => {
+      const formEl = document.querySelector('[data-section="task-form-section"]') as HTMLElement | null;
+      const nav = document.querySelector('nav') as HTMLElement | null;
+      const navHeight = nav?.offsetHeight ?? 64;
+      const extraMargin = 16;
+      const offset = navHeight + extraMargin;
+
+      if (formEl) {
+        const y = formEl.getBoundingClientRect().top + window.pageYOffset - offset;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+      } else if (attempt < 10) {
+        setTimeout(() => attemptScroll(attempt + 1), 50);
+      }
+    };
+
+    setTimeout(() => attemptScroll(), 50);
+  };
+
   const handleEditTask = (task: Task) => {
     setEditingTask(task);
     setIsEditing(true);
     setShowForm(true);
+    // Smoothly scroll to the form after it's rendered
+    scrollToTaskForm();
   };
 
   const handleDeleteTask = (taskId: string) => {
@@ -92,10 +122,29 @@ export default function HomePage() {
     });
   };
 
-  const handleCancelEdit = () => {
-    setIsEditing(false);
-    setEditingTask(null);
-    setShowForm(false);
+  // Listen for navigation events to show create task form
+  useEffect(() => {
+    const handleShowCreateTaskForm = () => {
+      setShowForm(true);
+      setIsEditing(false);
+      setEditingTask(null);
+    };
+
+    window.addEventListener('showCreateTaskForm', handleShowCreateTaskForm);
+    
+    return () => {
+      window.removeEventListener('showCreateTaskForm', handleShowCreateTaskForm);
+    };
+  }, []);
+
+  const scrollToDashboardStats = () => {
+    const dashboardStatsElement = document.querySelector('[data-section="dashboard-stats"]');
+    if (dashboardStatsElement) {
+      dashboardStatsElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }
   };
 
   return (
@@ -104,14 +153,38 @@ export default function HomePage() {
         {/* Page Header */}
         <ClientOnly>
           <motion.div
-            className="text-center mb-16 pt-8"
+            className="text-center mb-24 pt-16"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
+            data-section="hero-section"
           >
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-              Task Dashboard
-            </h1>
+            <div className="flex items-center justify-center gap-4 mb-6">
+              <motion.button
+                onClick={scrollToDashboardStats}
+                className="p-3 bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-800/50 rounded-full transition-all duration-200 group cursor-pointer"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                title="View Dashboard Stats"
+              >
+                <svg 
+                  className="w-8 h-8 text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-colors duration-200" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" 
+                  />
+                </svg>
+              </motion.button>
+              <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
+                Task Dashboard
+              </h1>
+            </div>
             <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
               Manage your tasks efficiently with our professional task management system
             </p>
@@ -119,14 +192,14 @@ export default function HomePage() {
         </ClientOnly>
 
         {/* Dashboard Stats */}
-        <div className="mb-16">
+        <div className="mb-24" data-section="dashboard-stats">
           <DashboardStats tasks={safeTasks} isLoading={isLoading} />
         </div>
 
         {/* Quick Actions */}
-        <div className="mb-16">
+        <div className="mb-24">
           <QuickActions 
-            onCreateTask={() => setShowForm(true)}
+            onCreateTask={() => { setShowForm(true); setIsEditing(false); setEditingTask(null); setTimeout(() => scrollToTaskForm(), 50); }}
             onBulkImport={() => {/* TODO: Implement bulk import */}}
             onExportTasks={() => {/* TODO: Implement export */}}
           />
@@ -142,6 +215,7 @@ export default function HomePage() {
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
                 transition={{ duration: 0.3 }}
+                data-section="task-form-section"
               >
                 <TaskForm
                   onSubmit={isEditing ? handleUpdateTask : handleCreateTask}
@@ -162,6 +236,7 @@ export default function HomePage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.3 }}
+            data-section="tasks-section"
           >
             <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
