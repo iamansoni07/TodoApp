@@ -1,208 +1,190 @@
 # Todo App - Full Stack MERN Application
 
-A modern, responsive Todo application built with the MERN stack (MongoDB, Express.js, React/Next.js, Node.js) featuring a clean UI and comprehensive task management capabilities.
+A modern, responsive Todo application built with the MERN stack (MongoDB, Express.js, React/Next.js, Node.js). It features a clean UI, robust API with validation and security middleware, and end‑to‑end task management.
 
 ## 🚀 Features
 
 ### Core Functionality
-- **Create Tasks**: Add new tasks with title and description
-- **Read Tasks**: View all tasks with real-time updates
-- **Update Tasks**: Edit task details and toggle completion status
-- **Delete Tasks**: Remove tasks with confirmation prompts
-- **Real-time Updates**: Automatic refresh after CRUD operations
+- **Create Tasks**: Add tasks with title, description, optional due date, and status
+- **Read Tasks**: List tasks with server-side filtering, sorting, and pagination
+- **Update Tasks**: Edit any task field (title, description, status, due date)
+- **Delete Tasks**: Remove tasks with confirmation in the UI
+- **Toggle Status**: One-click cycle through statuses via a dedicated endpoint
 
-### Bonus Features
-- **Task Filtering**: Filter tasks by status (pending/done)
-- **Advanced Sorting**: Sort tasks by title, description, status, or creation date
-- **Sort Order Control**: Ascending or descending sort options
-- **Task Statistics**: Visual summary of pending vs completed tasks
-- **Responsive Design**: Mobile-first design with dark mode support
+### Advanced Capabilities
+- **Filtering & Sorting**: Filter by status; sort by title, description, status, or creation date; control sort order
+- **Pagination**: `page` and `limit` query params for large lists
+- **Task Statistics**: Dashboard cards summarizing totals and completion rate
+- **Text Search (in development)**: Endpoint scaffolded; full server-side matching in progress
+- **Bulk Operations (API)**: Perform delete/update/toggle on multiple tasks
+- **Responsive Design**: Mobile-first UI with dark mode
+  
+Additional planned UI actions:
+- **Bulk Import (UI) (in development)**
+- **Export Tasks (UI) (in development)**
 
 ### User Experience
-- **Modern UI**: Clean, professional interface using Tailwind CSS
-- **Dark Mode**: Built-in dark/light theme support
-- **Loading States**: Smooth loading indicators and error handling
-- **Confirmation Dialogs**: Safe deletion with user confirmation
-- **Accessibility**: ARIA labels and keyboard navigation support
+- **Modern UI**: Tailwind-based design and animations with Framer Motion
+- **Dark Mode**: Built-in light/dark theme support
+- **Loading & Error States**: Clear feedback during async operations
+- **Accessibility**: Semantic markup and keyboard-focusable controls
 
 ## 🛠️ Tech Stack
 
 ### Backend
-- **Node.js**: JavaScript runtime environment
-- **Express.js**: Web application framework
-- **MongoDB**: NoSQL database
-- **Mongoose**: MongoDB object modeling
-- **CORS**: Cross-origin resource sharing
-- **dotenv**: Environment variable management
+- **Node.js + Express** for the HTTP API
+- **MongoDB + Mongoose** for data persistence
+- **Joi** for request validation
+- **Helmet** and **express-rate-limit** for security
+- **CORS** with allowlist via environment variables
+- **dotenv**, **morgan**
 
 ### Frontend
-- **Next.js 15**: React framework with App Router
-- **React 19**: User interface library
-- **TypeScript**: Type-safe JavaScript
-- **Tailwind CSS**: Utility-first CSS framework
-- **Axios**: HTTP client for API requests
+- **Next.js 15 (App Router)** with **React 19** and **TypeScript**
+- **@tanstack/react-query** for data fetching/caching and mutations
+- **Axios** HTTP client
+- **Tailwind CSS** and **Framer Motion** for UI/animation
 
 ## 📁 Project Structure
 
 ```
 TodoApp/
-├── backend/                 # Backend server
-│   ├── models/             # Database models
-│   │   └── Task.js        # Task schema and model
-│   ├── routes/             # API routes
-│   │   └── taskRoutes.js  # Task CRUD endpoints
-│   ├── server.js           # Express server setup
-│   └── package.json        # Backend dependencies
-├── frontend/               # Next.js frontend
-│   ├── app/                # App Router directory
-│   │   ├── components/     # React components
-│   │   │   ├── TaskForm.tsx    # Task creation/editing form
-│   │   │   ├── TaskItem.tsx    # Individual task display
-│   │   │   └── TaskList.tsx    # Task list with filters
-│   │   ├── utils/          # Utility functions
-│   │   │   └── api.ts      # API integration layer
-│   │   ├── page.tsx        # Main application page
-│   │   └── layout.tsx      # App layout wrapper
-│   └── package.json        # Frontend dependencies
-└── README.md               # Project documentation
+├── backend/
+│   ├── controllers/         # Route controllers (HTTP layer)
+│   ├── services/            # Business logic (CRUD, stats, rules)
+│   ├── models/              # Mongoose schemas (Task)
+│   ├── routes/              # Express routers (tasks)
+│   ├── validators/          # Joi schemas (create/update/query/id)
+│   ├── middleware/          # error handling, security, validation
+│   ├── config/              # env-specific config (production.js)
+│   ├── server.js            # App bootstrap, DB connect, middleware stack
+│   └── package.json
+└── frontend/
+    ├── app/
+    │   ├── components/      # UI components (TaskForm, TaskList, etc.)
+    │   ├── hooks/           # React Query hooks (useTasks)
+    │   ├── providers/       # QueryProvider
+    │   ├── utils/           # api.ts (typed client)
+    │   ├── page.tsx         # Dashboard page
+    │   └── settings/        # Settings page
+    └── package.json
 ```
+
+## 🧱 Data Model
+
+Task fields (MongoDB/Mongoose):
+- `title: string` (required)
+- `description: string` (required)
+- `dueDate: Date | null` (optional)
+- `status: 'todo' | 'in-progress' | 'done'` (default: `todo`)
+- `createdAt: Date`, `updatedAt: Date`
+
+## ✅ Validation Rules (Joi)
+
+- Create: `title` (1–100 chars), `description` (1–500 chars), `status` in `todo|in-progress|done` (default `todo`), `dueDate` ISO date nullable
+- Update: Same fields as create, all optional; `id` params validated as 24‑char hex
+- Query: `status`, `sortBy` in `title|description|status|createdAt`, `sortOrder` in `asc|desc`, pagination via `page` and `limit`; text search via `q` on search route
+
+## 🔐 Security & Middleware
+
+- **Helmet** CSP, CORP/COEP tuned for API use
+- **CORS** allowlist from `ALLOWED_ORIGINS`
+- **Rate limits**: general API (100/15m); stricter for creation (20/15m)
+- **Sanitization** of body/query to reduce XSS vectors
+- **Centralized error handler** with operational errors via `AppError`
+
+## 🔗 API Endpoints
+
+Base URL: `http://localhost:5000/api/tasks`
+
+| Method | Endpoint              | Description                              |
+|--------|-----------------------|------------------------------------------|
+| GET    | `/`                   | List tasks (filter/sort/paginate)        |
+| GET    | `/stats`              | Aggregate task statistics                 |
+| GET    | `/search?q=...`       | Text search (in development)             |
+| GET    | `/:id`                | Get task by id                            |
+| POST   | `/`                   | Create task                               |
+| PUT    | `/:id`                | Update task                               |
+| PATCH  | `/:id/toggle`         | Cycle status (todo → in‑progress → done)  |
+| DELETE | `/:id`                | Delete task                               |
+| POST   | `/bulk`               | Bulk delete/update/toggle                 |
+
+Query params (list/search): `status`, `sortBy`, `sortOrder`, `page`, `limit`
+
+Bulk request example:
+
+```json
+{
+  "operation": "delete|update|toggle",
+  "taskIds": ["<id1>", "<id2>"],
+  "data": { "status": "done" }
+}
+```
+
+## 🧭 Frontend Overview
+
+- **React Query** manages caching, background refetch, and optimistic flows for create/update/delete/toggle
+- **Components**: `TaskForm` (validation + create/edit), `TaskList` (client-side refine/sort), `TaskItem` (inline status toggle/edit/delete), `DashboardStats` (derived counts)
+- **API client**: `api.ts` uses `NEXT_PUBLIC_API_URL` (required in production) and expects `{ success, data }` responses
+- **Quick Actions**: Bulk Import and Export buttons are present but functionality is (in development)
+
+## 🚧 In Development
+
+- Text search: endpoint exists; server-side filtering logic is being finalized
+- Bulk Import (UI)
+- Export Tasks (UI)
 
 ## 🚀 Getting Started
 
 ### Prerequisites
-- Node.js (v18 or higher)
-- MongoDB (local installation or MongoDB Atlas)
-- npm or yarn package manager
+- Node.js 18+
+- MongoDB (local or Atlas)
 
 ### Backend Setup
 
-1. **Navigate to backend directory:**
-   ```bash
-   cd backend
-   ```
+1) Change directory and install deps
+```bash
+cd backend && npm install
+```
 
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+2) Create `.env`
+```env
+MONGODB_URI=mongodb://localhost:27017/todoapp
+PORT=5000
+NODE_ENV=development
+ALLOWED_ORIGINS=http://localhost:3000
+```
 
-3. **Environment Configuration:**
-   Create a `.env` file in the backend directory:
-   ```env
-   MONGODB_URI=mongodb://localhost:27017/todoapp
-   PORT=5000
-   ```
-   
-   **Note:** Replace the MongoDB URI with your actual connection string if using MongoDB Atlas or a different setup.
-
-4. **Start the server:**
-   ```bash
-   # Development mode with auto-reload
-   npm run dev
-   
-   # Production mode
-   npm start
-   ```
-
-   The backend will be available at `http://localhost:5000`
+3) Run the server
+```bash
+npm run dev   # development
+# or
+npm start     # production
+```
 
 ### Frontend Setup
 
-1. **Navigate to frontend directory:**
-   ```bash
-   cd frontend
-   ```
+1) Change directory and install deps
+```bash
+cd frontend && npm install
+```
 
-2. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+2) Configure API base URL
+```env
+# Required in production; optional in dev (defaults to http://localhost:5000/api/tasks)
+NEXT_PUBLIC_API_URL=http://localhost:5000/api/tasks
+```
 
-3. **Start the development server:**
-   ```bash
-   npm run dev
-   ```
+3) Run the dev server
+```bash
+npm run dev
+```
 
-   The frontend will be available at `http://localhost:3000`
+## 🌐 Deployment Notes
 
-## 📱 Usage
-
-### Creating Tasks
-1. Fill in the task title and description
-2. Select the initial status (defaults to "pending")
-3. Click "Create Task" to save
-
-### Managing Tasks
-- **Toggle Status**: Click the checkbox to mark tasks as complete/incomplete
-- **Edit Task**: Click the edit icon to modify task details
-- **Delete Task**: Click the delete icon and confirm deletion
-
-### Filtering and Sorting
-- **Show Filters**: Click "Show Filters" to access filtering options
-- **Status Filter**: Filter tasks by pending or completed status
-- **Sort Options**: Sort by title, description, status, or creation date
-- **Sort Order**: Choose ascending or descending order
-- **Clear Filters**: Reset all filters to default settings
-
-## 🔧 API Endpoints
-
-### Base URL: `http://localhost:5000/api/tasks`
-
-| Method | Endpoint | Description | Request Body |
-|--------|----------|-------------|--------------|
-| GET | `/` | Get all tasks | Query params: `status`, `sortBy`, `sortOrder` |
-| POST | `/` | Create new task | `{ title, description, status? }` |
-| PUT | `/:id` | Update task | `{ title?, description?, status? }` |
-| DELETE | `/:id` | Delete task | None |
-
-### Query Parameters
-- `status`: Filter by task status (`pending` or `done`)
-- `sortBy`: Sort field (`title`, `description`, `status`, `createdAt`)
-- `sortOrder`: Sort direction (`asc` or `desc`)
-
-## 🎨 UI Components
-
-### TaskForm
-- Reusable form for creating and editing tasks
-- Form validation and error handling
-- Responsive design with proper labels
-
-### TaskItem
-- Individual task display with status indicators
-- Action buttons for edit and delete operations
-- Visual feedback for completed tasks
-
-### TaskList
-- Task collection with filtering and sorting
-- Task statistics dashboard
-- Empty state handling
-
-## 🌟 Key Features Implementation
-
-### Backend Enhancements
-- **Filtering**: Query parameter support for status-based filtering
-- **Sorting**: Dynamic sorting by multiple fields with order control
-- **Error Handling**: Comprehensive error responses and validation
-- **CORS**: Cross-origin support for frontend integration
-
-### Frontend Features
-- **State Management**: React hooks for local state management
-- **API Integration**: Centralized API layer with TypeScript interfaces
-- **Real-time Updates**: Automatic refresh after CRUD operations
-- **Responsive Design**: Mobile-first approach with Tailwind CSS
-- **Dark Mode**: Built-in theme support
-
-## 🚀 Deployment
-
-### Backend Deployment
-- Deploy to platforms like Heroku, Railway, or DigitalOcean
-- Set environment variables for production
-- Use MongoDB Atlas for cloud database
-
-### Frontend Deployment
-- Build the application: `npm run build`
-- Deploy to Vercel, Netlify, or any static hosting service
-- Update API base URL for production backend
+- Backend: set `MONGODB_URI`, `PORT`, `ALLOWED_ORIGINS`, `NODE_ENV=production`
+- Frontend: set `NEXT_PUBLIC_API_URL` to your deployed backend `/api/tasks` base URL
+- Ensure CORS allowlist includes your frontend origin
 
 ## 🤝 Contributing
 
@@ -216,13 +198,6 @@ TodoApp/
 
 This project is open source and available under the [MIT License](LICENSE).
 
-## 🆘 Support
-
-For issues and questions:
-1. Check the existing issues
-2. Create a new issue with detailed description
-3. Include error logs and reproduction steps
-
 ---
 
-**Built with ❤️ using the MERN stack**
+Built with ❤️ using the MERN stack
