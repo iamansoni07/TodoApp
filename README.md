@@ -6,16 +6,16 @@ A modern, responsive Todo application built with the MERN stack (MongoDB, Expres
 
 ### Core Functionality
 - **Create Tasks**: Add tasks with title, description, optional due date, and status
-- **Read Tasks**: List tasks with server-side filtering, sorting, and pagination
+- **Read Tasks**: List tasks; API supports server-side filtering, sorting, and pagination
 - **Update Tasks**: Edit any task field (title, description, status, due date)
 - **Delete Tasks**: Remove tasks with confirmation in the UI
-- **Toggle Status**: One-click cycle through statuses via a dedicated endpoint
+- **Toggle Status**: One-click cycle through statuses (API exposes a dedicated endpoint; UI currently performs a standard update request)
 
 ### Advanced Capabilities
 - **Filtering & Sorting**: Filter by status; sort by title, description, status, or creation date; control sort order
-- **Pagination**: `page` and `limit` query params for large lists
-- **Task Statistics**: Dashboard cards summarizing totals and completion rate
-- **Text Search (in development)**: Endpoint scaffolded; full server-side matching in progress
+- **Pagination (API)**: `page` and `limit` query params for large lists (UI currently fetches without pagination)
+- **Task Statistics**: Dashboard cards summarizing totals and completion rate (computed client-side; API `/stats` is also available)
+- **Text Search (in development)**: Endpoint scaffolded; service-layer matching not wired yet, so results are not filtered server-side
 - **Bulk Operations (API)**: Perform delete/update/toggle on multiple tasks
 - **Responsive Design**: Mobile-first UI with dark mode
   
@@ -111,6 +111,11 @@ Base URL: `http://localhost:5000/api/tasks`
 
 Query params (list/search): `status`, `sortBy`, `sortOrder`, `page`, `limit`
 
+Note:
+- The UI currently cycles status by issuing an update (PUT `/:id`). The API also provides `PATCH /:id/toggle` for toggling.
+
+For detailed request/response examples, see `backend/API_DOCUMENTATION.md`.
+
 Bulk request example:
 
 ```json
@@ -126,6 +131,9 @@ Bulk request example:
 - **React Query** manages caching, background refetch, and optimistic flows for create/update/delete/toggle
 - **Components**: `TaskForm` (validation + create/edit), `TaskList` (client-side refine/sort), `TaskItem` (inline status toggle/edit/delete), `DashboardStats` (derived counts)
 - **API client**: `api.ts` uses `NEXT_PUBLIC_API_URL` (required in production) and expects `{ success, data }` responses
+- **Pagination**: UI does not yet pass `page/limit`; tasks are fetched and refined client-side
+- **Stats**: Computed client-side in the UI; the API `/stats` endpoint is available but not used yet
+- **Toggle**: UI cycles status with a standard update request; API also exposes `PATCH /:id/toggle`
 - **Quick Actions**: Bulk Import and Export buttons are present but functionality is (in development)
 
 ## 🚧 In Development
